@@ -1,0 +1,6 @@
+{
+  "name": "Keuangan Pesta Penggalang",
+  "description": "Aplikasi pencatatan pengeluaran harian Pramuka 2026",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
