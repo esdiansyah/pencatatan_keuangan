@@ -19,6 +19,7 @@ interface FinancialContextType {
   syncStatus: 'synced' | 'syncing' | 'error';
   lastSyncTime: Date | null;
   addTransaction: (tx: Omit<Transaction, 'id'>) => Promise<Transaction>;
+  updateTransaction: (id: string, tx: Omit<Transaction, 'id'>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   saveConfig: (config: AppConfig) => Promise<void>;
 }
@@ -158,6 +159,33 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
+  // Fungsi Edit/Update Transaksi (Otomatis Terupdate di Cloud dan di Semua Perangkat)
+  const updateTransaction = async (id: string, txData: Omit<Transaction, 'id'>): Promise<void> => {
+    const updatedTransaction: Transaction = {
+      ...txData,
+      id,
+    };
+
+    // Optimistic UI update
+    setTransactions((prev) =>
+      prev
+        .map((t) => (t.id === id ? updatedTransaction : t))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    );
+    setSyncStatus('syncing');
+
+    try {
+      const docRef = doc(db, 'transactions', id);
+      await setDoc(docRef, updatedTransaction);
+      setSyncStatus('synced');
+      setLastSyncTime(new Date());
+    } catch (error) {
+      setSyncStatus('error');
+      handleFirestoreError(error, OperationType.UPDATE, `transactions/${id}`);
+      throw error;
+    }
+  };
+
   // Fungsi Hapus Transaksi (Otomatis Terhapus di Cloud dan di Semua Perangkat)
   const deleteTransaction = async (id: string): Promise<void> => {
     // Optimistic UI update
@@ -202,6 +230,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         syncStatus,
         lastSyncTime,
         addTransaction,
+        updateTransaction,
         deleteTransaction,
         saveConfig,
       }}

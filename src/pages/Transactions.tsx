@@ -3,14 +3,15 @@ import { useFinancialData } from '../context/FinancialContext';
 import { Transaction } from '../lib/storage';
 import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Plus, Trash2, ArrowUpCircle, ArrowDownCircle, Download, Filter, Calendar, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, ArrowUpCircle, ArrowDownCircle, Download, Filter, Calendar, RefreshCw, Pencil, CheckCircle2 } from 'lucide-react';
 import { exportToPDF } from '../lib/pdfExport';
 
 export const Transactions: React.FC = () => {
-  const { transactions, config, addTransaction, deleteTransaction, syncStatus } = useFinancialData();
+  const { transactions, config, addTransaction, updateTransaction, deleteTransaction, syncStatus } = useFinancialData();
   const [showForm, setShowForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   
   // Form state
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -33,22 +34,47 @@ export const Transactions: React.FC = () => {
     { value: '2026-11', label: 'November 2026' },
   ];
 
+  const resetForm = () => {
+    setDate(format(new Date(), 'yyyy-MM-dd'));
+    setDescription('');
+    setAmount('');
+    setType('expense');
+    setEditingId(null);
+  };
+
+  const handleEdit = (tx: Transaction) => {
+    setEditingId(tx.id);
+    setDate(tx.date);
+    setDescription(tx.description);
+    setAmount(tx.amount.toString());
+    setType(tx.type);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description || !amount || isNaN(Number(amount))) return;
 
     try {
       setIsSubmitting(true);
-      await addTransaction({
-        date,
-        description,
-        amount: Number(amount),
-        type,
-      });
+      if (editingId) {
+        await updateTransaction(editingId, {
+          date,
+          description,
+          amount: Number(amount),
+          type,
+        });
+      } else {
+        await addTransaction({
+          date,
+          description,
+          amount: Number(amount),
+          type,
+        });
+      }
       
-      // Reset form
-      setDescription('');
-      setAmount('');
+      resetForm();
       setShowForm(false);
     } catch (err) {
       alert('Gagal menyimpan transaksi ke cloud. Pastikan perangkat terhubung internet.');
@@ -173,7 +199,16 @@ export const Transactions: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              if (showForm && editingId) {
+                resetForm();
+              } else if (showForm) {
+                setShowForm(false);
+              } else {
+                resetForm();
+                setShowForm(true);
+              }
+            }}
             className="flex items-center px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-sm font-medium transition-colors shadow-sm gap-2"
           >
             <Plus size={18} />
@@ -182,16 +217,26 @@ export const Transactions: React.FC = () => {
         </div>
       </div>
 
-      {/* Form Input Transaksi Baru */}
+      {/* Form Input / Edit Transaksi */}
       {showForm && (
-        <div className="bg-white p-6 rounded-2xl shadow-md border border-emerald-100 mb-6 transition-all">
+        <div className={`bg-white p-6 rounded-2xl shadow-md border mb-6 transition-all ${
+          editingId ? 'border-amber-200 ring-2 ring-amber-100' : 'border-emerald-100'
+        }`}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-              Tambah Transaksi Harian
+              <span className={`w-2.5 h-2.5 rounded-full ${editingId ? 'bg-amber-500' : 'bg-emerald-600'}`}></span>
+              <span>{editingId ? 'Edit Data Transaksi' : 'Tambah Transaksi Harian'}</span>
+              {editingId && (
+                <span className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full ml-1">
+                  Mode Perubahan
+                </span>
+              )}
             </h2>
             <button
-              onClick={() => setShowForm(false)}
+              onClick={() => {
+                resetForm();
+                setShowForm(false);
+              }}
               className="text-gray-400 hover:text-gray-600"
             >
               ✕
@@ -259,7 +304,10 @@ export const Transactions: React.FC = () => {
             <div className="md:col-span-2 flex justify-end gap-3 mt-2">
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  resetForm();
+                  setShowForm(false);
+                }}
                 className="px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
               >
                 Batal
@@ -267,10 +315,20 @@ export const Transactions: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2 text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 rounded-xl shadow-sm transition-colors flex items-center gap-2"
+                className={`px-6 py-2 text-sm font-semibold text-white rounded-xl shadow-sm transition-colors flex items-center gap-2 ${
+                  editingId
+                    ? 'bg-amber-600 hover:bg-amber-700 disabled:opacity-50'
+                    : 'bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50'
+                }`}
               >
                 {isSubmitting && <RefreshCw size={14} className="animate-spin" />}
-                <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Transaksi'}</span>
+                <span>
+                  {isSubmitting
+                    ? 'Menyimpan...'
+                    : editingId
+                    ? 'Simpan Perubahan'
+                    : 'Simpan Transaksi'}
+                </span>
               </button>
             </div>
           </form>
@@ -335,13 +393,22 @@ export const Transactions: React.FC = () => {
                       {formatRupiah(t.saldo)}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap text-center">
-                      <button
-                        onClick={() => handleDelete(t.id)}
-                        className="text-gray-400 hover:text-red-600 transition-colors p-1"
-                        title="Hapus Transaksi"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => handleEdit(t)}
+                          className="text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors p-1.5 rounded-lg"
+                          title="Edit Transaksi"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(t.id)}
+                          className="text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors p-1.5 rounded-lg"
+                          title="Hapus Transaksi"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

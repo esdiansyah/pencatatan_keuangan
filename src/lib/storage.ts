@@ -156,6 +156,12 @@ export const storage = {
     storage.saveTransactions(transactions);
     return newTransaction;
   },
+  updateTransaction: (id: string, updated: Omit<Transaction, 'id'>) => {
+    const transactions = storage.getTransactions();
+    const updatedList = transactions.map((t) => (t.id === id ? { ...updated, id } : t));
+    updatedList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    storage.saveTransactions(updatedList);
+  },
   deleteTransaction: (id: string) => {
     const transactions = storage.getTransactions();
     storage.saveTransactions(transactions.filter((t) => t.id !== id));
