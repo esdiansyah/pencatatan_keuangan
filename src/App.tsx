@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Transactions } from './pages/Transactions';
 import { Settings } from './pages/Settings';
 import { storage } from './lib/storage';
+import { FinancialProvider } from './context/FinancialContext';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -27,7 +28,11 @@ function App() {
   };
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500 font-medium">
+        Memuat aplikasi keuangan...
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -35,11 +40,13 @@ function App() {
   }
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab} onLogout={handleLogout}>
-      {activeTab === 'dashboard' && <Dashboard />}
-      {activeTab === 'transactions' && <Transactions />}
-      {activeTab === 'settings' && <Settings />}
-    </Layout>
+    <FinancialProvider>
+      <Layout activeTab={activeTab} setActiveTab={setActiveTab} onLogout={handleLogout}>
+        {activeTab === 'dashboard' && <Dashboard />}
+        {activeTab === 'transactions' && <Transactions />}
+        {activeTab === 'settings' && <Settings />}
+      </Layout>
+    </FinancialProvider>
   );
 }
 

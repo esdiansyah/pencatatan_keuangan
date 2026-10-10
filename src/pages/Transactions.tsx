@@ -1,26 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { storage, Transaction } from '../lib/storage';
+import React, { useState, useMemo } from 'react';
+import { useFinancialData } from '../context/FinancialContext';
+import { Transaction } from '../lib/storage';
 import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Plus, Trash2, ArrowUpCircle, ArrowDownCircle, Download, Filter, Calendar } from 'lucide-react';
+import { Plus, Trash2, ArrowUpCircle, ArrowDownCircle, Download, Filter, Calendar, RefreshCw } from 'lucide-react';
 import { exportToPDF } from '../lib/pdfExport';
 
 export const Transactions: React.FC = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const { transactions, config, addTransaction, deleteTransaction, syncStatus } = useFinancialData();
   const [showForm, setShowForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form state
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<'income' | 'expense'>('expense');
-
-  useEffect(() => {
-    setTransactions(storage.getTransactions());
-  }, []);
-
-  const config = storage.getConfig();
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -37,29 +33,37 @@ export const Transactions: React.FC = () => {
     { value: '2026-11', label: 'November 2026' },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description || !amount || isNaN(Number(amount))) return;
 
-    const newTx = storage.addTransaction({
-      date,
-      description,
-      amount: Number(amount),
-      type,
-    });
-
-    setTransactions([newTx, ...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    
-    // Reset form
-    setDescription('');
-    setAmount('');
-    setShowForm(false);
+    try {
+      setIsSubmitting(true);
+      await addTransaction({
+        date,
+        description,
+        amount: Number(amount),
+        type,
+      });
+      
+      // Reset form
+      setDescription('');
+      setAmount('');
+      setShowForm(false);
+    } catch (err) {
+      alert('Gagal menyimpan transaksi ke cloud. Pastikan perangkat terhubung internet.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus data transaksi ini?')) {
-      storage.deleteTransaction(id);
-      setTransactions(transactions.filter((t) => t.id !== id));
+  const handleDelete = async (id: string) => {
+    if (confirm('Apakah Anda yakin ingin menghapus data transaksi ini? Data akan otomatis terhapus di seluruh akun/perangkat.')) {
+      try {
+        await deleteTransaction(id);
+      } catch (err) {
+        alert('Gagal menghapus transaksi dari cloud.');
+      }
     }
   };
 
@@ -122,9 +126,23 @@ export const Transactions: React.FC = () => {
       {/* Header and Controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Buku Kas & Transaksi</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-bold text-gray-900">Buku Kas & Transaksi</h1>
+            {syncStatus === 'synced' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Sinkron Cloud
+              </span>
+            )}
+            {syncStatus === 'syncing' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                <RefreshCw size={11} className="animate-spin text-blue-600" />
+                Menyinkronkan...
+              </span>
+            )}
+          </div>
           <p className="text-sm text-gray-500">
-            Pencatatan pengeluaran harian dan pemasukan kegiatan Pramuka
+            Pencatatan pengeluaran harian dan pemasukan kegiatan Pramuka (Otomatis Tersinkron Antar Perangkat)
           </p>
         </div>
 
@@ -248,9 +266,11 @@ export const Transactions: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-6 py-2 text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-sm transition-colors"
+                disabled={isSubmitting}
+                className="px-6 py-2 text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 rounded-xl shadow-sm transition-colors flex items-center gap-2"
               >
-                Simpan Transaksi
+                {isSubmitting && <RefreshCw size={14} className="animate-spin" />}
+                <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Transaksi'}</span>
               </button>
             </div>
           </form>

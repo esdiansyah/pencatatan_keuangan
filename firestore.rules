@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Validasi data transaksi keuangan
+    function isValidTransaction(data) {
+      return data.id is string
+        && data.id.size() <= 128
+        && data.date is string
+        && data.date.size() <= 20
+        && data.description is string
+        && data.description.size() <= 500
+        && data.amount is number
+        && data.amount >= 0
+        && data.type in ['income', 'expense'];
+    }
+
+    // Validasi data konfigurasi anggaran
+    function isValidConfig(data) {
+      return data.initialBudget is number
+        && data.initialBudget >= 0;
+    }
+
+    // Akses data transaksi keuangan (sinkronisasi multi-perangkat)
+    match /transactions/{transactionId} {
+      allow read: if true;
+      allow create, update: if isValidTransaction(request.resource.data);
+      allow delete: if true;
+    }
+
+    // Akses konfigurasi anggaran kegiatan
+    match /settings/{settingId} {
+      allow read: if true;
+      allow create, update: if isValidConfig(request.resource.data);
+      allow delete: if true;
+    }
+  }
+}

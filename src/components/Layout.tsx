@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, LayoutDashboard, ReceiptText, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import { Menu, X, LayoutDashboard, ReceiptText, Settings as SettingsIcon, LogOut, Cloud, RefreshCw } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { storage } from '../lib/storage';
+import { useFinancialData } from '../context/FinancialContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, onLogout }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { syncStatus } = useFinancialData();
 
   // Auto-close sidebar on mobile when tab changes
   useEffect(() => {
@@ -94,12 +96,34 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-gray-200 space-y-3">
+          <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-xs">
+            <div className="flex items-center justify-between font-semibold text-gray-800 mb-1">
+              <span className="flex items-center gap-1.5">
+                <Cloud size={14} className="text-emerald-600" />
+                Sinkron Cloud
+              </span>
+              {syncStatus === 'synced' && (
+                <span className="text-[10px] text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded-full font-medium">
+                  Aktif
+                </span>
+              )}
+              {syncStatus === 'syncing' && (
+                <span className="text-[10px] text-blue-700 bg-blue-100/70 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1">
+                  <RefreshCw size={8} className="animate-spin" /> Proses
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-gray-500 leading-tight">
+              Otomatis terhubung di semua perangkat & akun panitia.
+            </p>
+          </div>
+
           <button
             onClick={onLogout}
-            className="w-full flex items-center px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+            className="w-full flex items-center px-4 py-2.5 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors"
           >
-            <LogOut size={20} className="mr-3" />
+            <LogOut size={18} className="mr-3" />
             Keluar
           </button>
         </div>

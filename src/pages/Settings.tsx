@@ -1,22 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { storage } from '../lib/storage';
+import { useFinancialData } from '../context/FinancialContext';
+import { RefreshCw } from 'lucide-react';
 
 export const Settings: React.FC = () => {
+  const { config, saveConfig, syncStatus } = useFinancialData();
   const [initialBudget, setInitialBudget] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const config = storage.getConfig();
-    setInitialBudget(config.initialBudget.toString());
-  }, []);
+    if (config) {
+      setInitialBudget(config.initialBudget.toString());
+    }
+  }, [config]);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    storage.saveConfig({
-      initialBudget: Number(initialBudget) || 0,
-    });
-    setSaveMessage('Pengaturan berhasil disimpan!');
-    setTimeout(() => setSaveMessage(''), 3000);
+    try {
+      setIsSaving(true);
+      await saveConfig({
+        initialBudget: Number(initialBudget) || 0,
+      });
+      setSaveMessage('Pengaturan berhasil disimpan dan tersinkron ke semua perangkat!');
+      setTimeout(() => setSaveMessage(''), 4000);
+    } catch (err) {
+      setSaveMessage('Gagal menyimpan ke cloud.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -52,9 +63,11 @@ export const Settings: React.FC = () => {
             </span>
             <button
               type="submit"
-              className="px-6 py-2.5 bg-emerald-700 text-white rounded-xl hover:bg-emerald-800 transition-colors font-semibold shadow-sm text-sm"
+              disabled={isSaving}
+              className="px-6 py-2.5 bg-emerald-700 text-white rounded-xl hover:bg-emerald-800 disabled:opacity-50 transition-colors font-semibold shadow-sm text-sm flex items-center gap-2"
             >
-              Simpan Pengaturan
+              {isSaving && <RefreshCw size={14} className="animate-spin" />}
+              <span>{isSaving ? 'Menyimpan ke Cloud...' : 'Simpan Pengaturan'}</span>
             </button>
           </div>
         </form>

@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Catatan transaksi harian kegiatan Pramuka (pemasukan atau pengeluaran)",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID unik transaksi"
+        },
+        "date": {
+          "type": "string",
+          "description": "Tanggal transaksi YYYY-MM-DD"
+        },
+        "description": {
+          "type": "string",
+          "description": "Keterangan atau rincian transaksi"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Nominal transaksi dalam Rupiah"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["income", "expense"],
+          "description": "Jenis transaksi (income atau expense)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Waktu pembuatan record"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Waktu pembaruan record"
+        }
+      },
+      "required": ["id", "date", "description", "amount", "type"]
+    },
+    "Config": {
+      "title": "Config",
+      "description": "Konfigurasi anggaran kegiatan Pramuka",
+      "type": "object",
+      "properties": {
+        "initialBudget": {
+          "type": "number",
+          "description": "Total anggaran awal kegiatan dalam Rupiah"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Waktu terakhir konfigurasi diubah"
+        }
+      },
+      "required": ["initialBudget"]
+    }
+  },
+  "firestore": {
+    "/transactions/{transactionId}": {
+      "schema": {
+        "$ref": "#/entities/Transaction"
+      },
+      "description": "Koleksi data transaksi keuangan kegiatan Pramuka"
+    },
+    "/settings/{settingId}": {
+      "schema": {
+        "$ref": "#/entities/Config"
+      },
+      "description": "Konfigurasi dan anggaran awal aplikasi"
+    }
+  }
+}

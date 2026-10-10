@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { storage } from '../lib/storage';
+import { useFinancialData } from '../context/FinancialContext';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Wallet, TrendingDown, TrendingUp, Download, Calendar, Filter, FileSpreadsheet } from 'lucide-react';
+import { Wallet, TrendingDown, TrendingUp, Download, Calendar, Filter, FileSpreadsheet, CloudCheck, RefreshCw } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { exportToPDF } from '../lib/pdfExport';
@@ -11,8 +11,7 @@ export const Dashboard: React.FC = () => {
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
   const [exportMonthChoice, setExportMonthChoice] = useState<string>('all');
 
-  const transactions = storage.getTransactions();
-  const config = storage.getConfig();
+  const { transactions, config, syncStatus } = useFinancialData();
 
   const formatRupiah = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -169,9 +168,28 @@ export const Dashboard: React.FC = () => {
       {/* Header and Action Buttons */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div>
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 mb-1">
-            Kegiatan Pramuka 2026
-          </span>
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+              Kegiatan Pramuka 2026
+            </span>
+            {syncStatus === 'synced' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Tersinkron Cloud Real-time
+              </span>
+            )}
+            {syncStatus === 'syncing' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                <RefreshCw size={11} className="animate-spin text-blue-600" />
+                Menyinkronkan...
+              </span>
+            )}
+            {syncStatus === 'error' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                Mode Offline
+              </span>
+            )}
+          </div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard Keuangan</h1>
           <p className="text-sm text-gray-500">
             Panitia Pelaksana Pesta Penggalang SMP/MTs Kec. Muara Kaman
